@@ -8,6 +8,9 @@ The code depends on mswavef/mswavef.pro and libpub/integ_rate.pro
 
 The code could be easily adapted to collisions with perturbers other than hydrogen atoms by providing the appropriate scattering amplitudes for e+perturber scattering.
 
+Please cite the DOI if you use the code in research:
+[![DOI](https://zenodo.org/badge/21607/barklem/kaulakys.svg)](https://zenodo.org/badge/latestdoi/21607/barklem/kaulakys)
+
 References:
 
 Kaulakys B (1991) Free electron model for collisional angular momentum mixing of high Rydberg atoms. J Phys B At 24(5):L127–L132, DOI 10.1088/0953-4075/24/5/004
