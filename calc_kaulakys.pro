@@ -2,6 +2,7 @@ pro calc_kaulakys, infile, outdir
 ; this wrapper takes an input file and calculates data from it	
 
 
+
 q = file_test(outdir)
 if q then begin
     q1 = ' '
@@ -81,6 +82,8 @@ iu = where(E ne shift(E, 1), nu)
 E_uniq = E(iu)
 indu = intarr(ns)
 for i = 0, ns-1 do indu(i) = where(E_uniq eq E(i))
+
+;stop
 
 ; write out the merged states list
    
