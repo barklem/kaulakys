@@ -329,8 +329,16 @@ endfor
 return, cross
 end
 
-function kaulakys_crossh, A, nstarlow, llow, nupp, lupp, dE, E, cofm=cofm, version=version
+function kaulakys_crossh, E, private, cofm=cofm, version=version
 ; spin-averaged cross section for H collision on target
+
+A = private.nstar
+nstarlow = private.nstar
+nlow = private.n
+llow = private.l
+nupp = private.nd
+lupp = private.ld
+dE = private.dE
 
 L_singlet = 5.965     ; scattering lengths in au, from Schwartz 1961 (agree with Bhatia 2007)
 L_triplet = 1.7686
@@ -390,7 +398,11 @@ function ratekernel_best, E, private, kT=kT
 return, kaulakys_crossh_best(E, private, cofm = 1) * E * exp(-E/kT) 
 end
 
-function kaulakys_rateh, T, tstruct, method=method, npts=npts, plt=plt
+function ratekernel, E, private, kT=kT
+return, kaulakys_crossh(E, private, cofm = 1) * E * exp(-E/kT) 
+end
+
+function kaulakys_rateh, T, tstruct, method=method, npts=npts, plt=plt, scat=scat
 ; the rate coefficient for collision with H
 ;
 ; T is the temperature in K  -  may be an array
@@ -414,6 +426,8 @@ function kaulakys_rateh, T, tstruct, method=method, npts=npts, plt=plt
 ;  3 (default) : use adaptive integration routine 
 ;                this will be very slow for multiple T, since adaptive part depends on T
 ;                and so cross sections can't be reused
+;
+;   scat -> use scattering length approximation
 
 A      = tstruct.A
 n      = tstruct.n
@@ -438,7 +452,11 @@ case method of
          mu = mp*A/(A+mp) * 1822.89  
          v = sqrt(8.*kT/!pi/mu) 
          E = 0.5*mu*v*v
-         Q = kaulakys_crossh_best(E, private, cofm = 1) *(5.29177e-9^2)  ; convert to cm^2
+         if keyword_set(scat) then begin
+            Q = kaulakys_crossh(E, private, cofm = 1) *(5.29177e-9^2)  ; convert to cm^2
+         endif else begin
+            Q = kaulakys_crossh_best(E, private, cofm = 1) *(5.29177e-9^2)  ; convert to cm^2
+         endelse   
          C = Q * v * 2.18769e8   ; convert v to cm/s
       end 
    2: begin
@@ -447,7 +465,11 @@ case method of
          Estep = (alog(Emax) - alog(Emin))/(npts-1)
          E = exp(alog(Emin) + Estep*dindgen(npts))  ; grid in au
          E = [E, Emax*10, Emax*100]                 ; extend grid roughly at large E
-         Q = kaulakys_crossh_best(E, private, cofm = 1)
+         if keyword_set(scat) then begin
+            Q = kaulakys_crossh(E, private, cofm = 1) 
+         endif else begin
+            Q = kaulakys_crossh_best(E, private, cofm = 1) 
+         endelse
          if keyword_set(plt) then begin
             plot, E*27.2116, Q, /xlog
             oplot, [kT, kT]*27.2116 , [1e-30, 1e10], linestyle = 2
@@ -464,7 +486,11 @@ case method of
          nT = n_elements(T)
          igral = dblarr(nT)
          for i = 0, nT-1 do begin
-            igral[i] = qpint1d('ratekernel_best', Emin, +inf, private, functargs = {kT:kT[i]})
+            if keyword_set(scat) then begin
+              igral[i] = qpint1d('ratekernel', Emin, +inf, private, functargs = {kT:kT[i]})
+            endif else begin
+              igral[i] = qpint1d('ratekernel_best', Emin, +inf, private, functargs = {kT:kT[i]})
+            endelse  
          endfor
          C = C1 * igral * (5.29177e-9^2) * 2.18769e8   ; au -> cgs
       end
