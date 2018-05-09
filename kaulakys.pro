@@ -421,7 +421,7 @@ function kaulakys_rateh, T, tstruct, method=method, npts=npts, plt=plt, scat=sca
 ;  1           : uses fast approximate method < sig(v) v > = sig(<v>) <v>
 ;                Kaulakys 1986 claims max error is 22%
 ;  2           : use brute force on prescribed log E grid with npts points 
-;                default is 100 points
+;                default is 10 points
 ;                plt turns on plotting for checking grid
 ;  3 (default) : use adaptive integration routine 
 ;                this will be very slow for multiple T, since adaptive part depends on T

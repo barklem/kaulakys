@@ -23,13 +23,23 @@ if q then begin
 endif 
 spawn, 'mkdir -p ' + outdir
 
-Tmin = 1000
+
+Tmin = 50
+Tmax = 1000
+Tstep = 50
+
+nT1=fix((Tmax-Tmin)/Tstep)+1
+T1 = indgen(nT1)*Tstep + Tmin
+
+Tmin = 2000
 Tmax = 20000
 Tstep = 1000
 
-nT=fix((Tmax-Tmin)/Tstep)+1
-T = indgen(nT)*Tstep + Tmin
+nT2=fix((Tmax-Tmin)/Tstep)+1
+T2 = indgen(nT2)*Tstep + Tmin
 
+T = [T1, T2]
+nT = nT1 + nT2
 
 ; read data
 openr, lunm, infile, /get_lun
@@ -107,8 +117,8 @@ for i = 0, ns-2 do begin
 
        dE = (E[j]-E[i])/8065.45d0
        ts = {A:mass, N:n[i], L:l[i], ND:n[j], LD:l[j], NSTAR:nstar[i], DE:dE}
-       C = kaulakys_rateh(T, ts, method=2, npts=10, scat=1)
-       ;C = kaulakys_rateh(T, ts, method=1)
+       ;C = kaulakys_rateh(T, ts, method=2, npts=100, scat=1)
+       C = kaulakys_rateh(T, ts, method=2, npts=100, scat=0)
        
        	if sc[i] ne 0 then begin
 
@@ -123,7 +133,13 @@ for i = 0, ns-2 do begin
 
     	C = C * cfp[i]^2.
 
-       Cdown = C * g[i]/g[j] * exp(dE/(8.617e-5*T))
+       ;facT = exp(dE/(8.617d-5*T))
+       ;ind = where(finite(facT))
+       ;Cdown = C * 0.d0
+       ;Cdown[ind] = C[ind] * g[i]/g[j] * facT[ind]
+
+       Cdown = exp(alog(C *g[i]/g[j])+dE/(8.61733034d-5*T))   ; this limits numerical error at small T
+
        Cdata(i,j,*) = C
        Cdata(j,i,*) = Cdown
 
