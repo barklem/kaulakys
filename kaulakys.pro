@@ -6,6 +6,43 @@
 ;
 ; Notes: 1. various parameters in this code may need tweaking for your particular case (esp. pmax and npts in Inl)
 ;
+; 
+
+pro gwfsq_gen, nstar, l
+; pregenerates the momentum space wavefunction
+
+common WAVEFUNC, parr, gsqarr
+
+npts = 10000  
+pm   = 2.d0/!pi/nstar   ; <p>  n*=1 -> 0.64  n*=100 -> 6.4e-3
+pmin = 1e-6
+pmax = 1e2
+
+; generate log grid for npts-1 points on log grid (more points at small momenta)
+
+pstep = (alog(pmax) - alog(pmin))/(npts-2)
+parr = exp(alog(pmin) + pstep*dindgen(npts-1))
+
+; add zero
+parr = [0.d0, parr]
+
+gsqarr = gwfsq(nstar, l, parr)
+
+end
+
+function gwfsq_int, nstar, l, p, noint=noint
+
+common WAVEFUNC, parr, gsqarr
+
+if keyword_set(noint) then begin
+  gsq = gwfsq(nstar, l, p)
+endif else begin  
+  gsq = interpol(gsqarr, parr, p)
+endelse
+
+return, gsq
+end  
+
 
 function scatamp_h, p, x
 ; gives the SQUARE of the scattering amplitude f_e(p,x) in au for e+H collisions 
@@ -63,13 +100,13 @@ end
 
 function igr1, p, x1, x2, xt2
 private = {x1:x1, x2:x2, p:p}
-ans = qpint1d('ikern1', x1, xt2, private, breakpoints = [1., x1, x2])
+ans = qpint1d('ikern1', x1, xt2, private, breakpoints = [1., x1, x2], epsrel=1e-3)
 return, ans
 end
 
 function igr2, p, x1, x2, xt1
 private = {x1:x1, x2:x2, p:p}
-ans = qpint1d('ikern2', -x2, xt1, private, breakpoints = [1., -x1, -x2])
+ans = qpint1d('ikern2', -x2, xt1, private, breakpoints = [1., -x1, -x2], epsrel=1e-3)
 return, ans
 end
 
@@ -100,7 +137,7 @@ x1 = private.x1
 x2 = private.x2
 nstar = private.nstar
 l = private.l
-return, ksigma(p, pt, x1, x2) * gwfsq(nstar,l,p) * p*p
+return, ksigma(p, pt, x1, x2) * gwfsq_int(nstar,l,p, noint=1) * p*p
 end
 
 function kaulakys_crossh_best, E, private, cofm=cofm
@@ -133,7 +170,7 @@ for i = 0, n_elements(Ecm)-1 do begin
    
    inf = !values.d_infinity
    private2 = {pt:pt, x1:x1, x2:x2, nstar:nstar, l:l}
-   igral = qpint1d('kkernel', pt, +inf, private2)
+   igral = qpint1d('kkernel', pt, +inf, private2, epsrel=1e-3)
    cross[i] = (2.*ld+1.)*sqrt(2.)/2./nd^5./v^2. * igral
    
    
@@ -158,7 +195,7 @@ function Inl_kernel, p
 common QUANTUM, nstarp, lp
 common SHARE, pt
 
-wfsq = gwfsq(nstarp,lp,p)
+wfsq = gwfsq_int(nstarp,lp,p,noint=1)
 kernel = wfsq*(p-pt)*p
 
 return, kernel
@@ -446,6 +483,9 @@ time = systime(1)
 
 kT = T *1.38066e-23/4.35981e-18 ;  kT in au  = T in au (k=1)
 
+; pregenerate initial state wavefunction
+;gwfsq_gen, nstar, l
+
 case method of
    1: begin
          mp = 1.008
@@ -487,9 +527,9 @@ case method of
          igral = dblarr(nT)
          for i = 0, nT-1 do begin
             if keyword_set(scat) then begin
-              igral[i] = qpint1d('ratekernel', Emin, +inf, private, functargs = {kT:kT[i]})
+              igral[i] = qpint1d('ratekernel', Emin, +inf, private, functargs = {kT:kT[i]}, epsrel=1e-3)
             endif else begin
-              igral[i] = qpint1d('ratekernel_best', Emin, +inf, private, functargs = {kT:kT[i]})
+              igral[i] = qpint1d('ratekernel_best', Emin, +inf, private, functargs = {kT:kT[i]}, epsrel=1e-3)
             endelse  
          endfor
          C = C1 * igral * (5.29177e-9^2) * 2.18769e8   ; au -> cgs

@@ -1,7 +1,8 @@
 pro calc_kaulakys, infile, outdir
 ; this wrapper takes an input file and calculates data from it	
 
-
+; the input file should be "unmerged" i.e. states are still divided into their components with different cores and thus cfps
+; this must be so, since the spin redistribution requires the spin of the core to be known
 
 q = file_test(outdir)
 if q then begin
@@ -52,10 +53,11 @@ l = intarr(ns)
 nstar = dblarr(ns)
 s = intarr(ns)
 sc = intarr(ns)
-ionic = intarr(ns)
+ionic = intarr(ns) * 0
 core = strarr(ns)
 cfp = fltarr(ns)
-   
+Hexc = intarr(ns) * 0
+
 for i = 0, ns-1 do begin
 	ii=0
 	t1 = ' '
@@ -81,7 +83,9 @@ for i = 0, ns-1 do begin
     ionic(i) = t9
     core(i) = t10
     cfp(i) = t11
+    if strpos(label[i], 'H*') ge 0 then Hexc(i) = 1
 endfor
+
 
 close, lunm
 free_lun, lunm
@@ -106,33 +110,47 @@ free_lun, lunm
 C_uniq = dblarr(nu,nu,nT)
 Cdata = dblarr(ns,ns,nT)
 
+; Kaulakys is for excitation - stated energy is transferred to the electron,  p_t is momentum threshold
+; and so downward rates come from detailed balance.
+
 for i = 0, ns-2 do begin
    for j = i+1, ns-1 do begin
        print, i+1, j+1
        if sc[i] ne sc[j] then goto, skip
        if core[i] ne core[j] then goto, skip
-       if ionic[i] or ionic[j] then goto, skip  
+       if ionic[i] or ionic[j] then goto, skip
+       if Hexc[i] or Hexc[j] then goto, skip       ; model can't couple different H excitations
        if (nstar[i]-l[i]) lt 0.1 then goto, skip   ; the Coulomb model breaks down
        if (nstar[j]-l[j]) lt 0.1 then goto, skip
 
        dE = (E[j]-E[i])/8065.45d0
        ts = {A:mass, N:n[i], L:l[i], ND:n[j], LD:l[j], NSTAR:nstar[i], DE:dE}
+       ; since Emax = 30*kT in this routine, even with log grid, using << 30 pts is dangerous
        ;C = kaulakys_rateh(T, ts, method=2, npts=100, scat=1)
        ;C = kaulakys_rateh(T, ts, method=2, npts=100, scat=0)
-       C = kaulakys_rateh(T, ts, method=2, npts=10, scat=0)
+       C = kaulakys_rateh(T, ts, method=2, npts=30, scat=0)
        
-       	if sc[i] ne 0 then begin
+       	if sc[i] ne 0 then begin   ; in this case only one possible spin state
 
-   			fac = (2.*s[j]+1.)/(2.*(2.*sc[i]+1.))*0.392
-            if s[i] ne s[j] then begin
+            ; find the other possible spin state
+            sdash = sc[i] - 0.5    
+            if sdash eq s[i] then sdash = sdash + 1
+
+            ; calculate factor for spin change case
+            fac = (2.*sdash+1.)/(2.*(2.*sc[i]+1.))*0.392
+
+            ; apply factors appropriately
+            if s[i] ne s[j] then begin  ; spin change
                C = fac*C
-            endif else begin
+            endif else begin   ; no spin change
                C = (1-fac)*C
             endelse      
 
-    	endif	
+    	  endif	
 
-    	C = C * cfp[i]^2.
+    	C = C * cfp[i]^2.   ; since the cross section is proportional to the square of the initial state momentum-space wavefunction in Kaulakys (1985)
+                          ; note that if sum(cfps^2)=1 as it should, then we will get back the original value below when we merge the components
+                          
 
        ;facT = exp(dE/(8.617d-5*T))
        ;ind = where(finite(facT))
@@ -153,6 +171,8 @@ for i = 0, ns-2 do begin
        skip:
    endfor
 endfor
+
+; merge all components
 
 C_uniq = C_uniq * 0.d0
 for i = 0, ns-1 do begin
