@@ -4,6 +4,8 @@ pro calc_kaulakys, infile, outdir
 ; the input file should be "unmerged" i.e. states are still divided into their components with different cores and thus cfps
 ; this must be so, since the spin redistribution requires the spin of the core to be known
 
+time = systime(1)
+
 q = file_test(outdir)
 if q then begin
     q1 = ' '
@@ -113,6 +115,7 @@ Cdata = dblarr(ns,ns,nT)
 ; Kaulakys is for excitation - stated energy is transferred to the electron,  p_t is momentum threshold
 ; and so downward rates come from detailed balance.
 
+count = 0
 for i = 0, ns-2 do begin
    for j = i+1, ns-1 do begin
        print, i+1, j+1
@@ -127,8 +130,8 @@ for i = 0, ns-2 do begin
        ts = {A:mass, N:n[i], L:l[i], ND:n[j], LD:l[j], NSTAR:nstar[i], DE:dE}
        ; since Emax = 30*kT in this routine, even with log grid, using << 30 pts is dangerous
        ;C = kaulakys_rateh(T, ts, method=2, npts=100, scat=1)
-       ;C = kaulakys_rateh(T, ts, method=2, npts=100, scat=0)
-       C = kaulakys_rateh(T, ts, method=2, npts=30, scat=0)
+       C = kaulakys_rateh(T, ts, method=2, npts=100, scat=0)
+       ;C = kaulakys_rateh(T, ts, method=2, npts=30, scat=0)
        
        	if sc[i] ne 0 then begin   ; in this case only one possible spin state
 
@@ -168,6 +171,7 @@ for i = 0, ns-2 do begin
        fmt = '(' + strcompress(string(nT, '(i6)'), /remove_all) + '(1X,E10.2))'
        print, C, format = fmt
        print, Cdown, format = fmt
+       count= count+1
        skip:
    endfor
 endfor
@@ -195,6 +199,13 @@ for iT = 0, nT-1 do begin
    close, lunm
    free_lun, lunm
 endfor
+
+print, 'input file: ', infile
+print, 'output directory: ', outdir
+print, 'number of transitions: ', count
+print, 'time for calc_kaulakys: ', systime(1) - time
+print, 'time per transition: ', (systime(1) - time)/(count*1.)
+
 
 end
 
