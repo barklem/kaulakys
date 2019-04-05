@@ -126,11 +126,19 @@ for i = 0, ns-2 do begin
        if (nstar[i]-l[i]) lt 0.1 then goto, skip   ; the Coulomb model breaks down
        if (nstar[j]-l[j]) lt 0.1 then goto, skip
 
+       ; where multiple (two) parents but no equivalent electrons, we skip the second 
+       ; to avoid counting twice.  This could in principle be accounted for via 
+       ; angular momentum coupling to the core, see below
+
+       if i ne 0 then begin
+          if (label[i] eq label[i-1]) and (E[i] eq E[i-1]) and (cfp[i] eq 1) and (cfp[i-1] eq 1) then goto, skip
+       endif 
+
        dE = (E[j]-E[i])/8065.45d0
        ts = {A:mass, N:n[i], L:l[i], ND:n[j], LD:l[j], NSTAR:nstar[i], DE:dE}
        ; since Emax = 30*kT in this routine, even with log grid, using << 30 pts is dangerous
-       C = kaulakys_rateh(T, ts, method=2, npts=100, scat=1)
-       ;C = kaulakys_rateh(T, ts, method=2, npts=100, scat=0)
+       ;C = kaulakys_rateh(T, ts, method=2, npts=100, scat=1)
+       C = kaulakys_rateh(T, ts, method=2, npts=100, scat=0)
        ;C = kaulakys_rateh(T, ts, method=2, npts=30, scat=0)
        
        	if sc[i] ne 0 then begin   ; in this case only one possible spin state
@@ -152,8 +160,14 @@ for i = 0, ns-2 do begin
     	  endif	
 
     	C = C * cfp[i]^2.   ; since the cross section is proportional to the square of the initial state momentum-space wavefunction in Kaulakys (1985)
-                          ; note that if sum(cfps^2)=1 as it should, then we will get back the original value below when we merge the components
+                          ; note that if sum(cfps^2)=1 as it should, then we will get back the original value below when we merge the components (different cores)
                           ; this also assumes the angular momentum coupling coeffs sum to 1 (sum over all projections).  This is something to prove in future.
+                          ; for the moment one can at a minimum say angular momentum coupling is ignored
+
+      ; an exception is cases where multiple (two) parents but no equivalent electrons
+      ; see above
+      
+                          
                           
 
        ;facT = exp(dE/(8.617d-5*T))
