@@ -175,6 +175,10 @@ for i = 0, ns-2 do begin
        ;Cdown = C * 0.d0
        ;Cdown[ind] = C[ind] * g[i]/g[j] * facT[ind]
 
+       ; check for negative rate coefficients
+       ; these have been seen in some cases with very small rate coeffs
+       ; this is (hopefully) just when numerical precision is lost
+       ; ideally one should do this at the cross section level, but it doesn't really matter.
        ind = where(C lt 0.d0, nind)
        if nind gt 0 then C[ind] = 0.d0
 
