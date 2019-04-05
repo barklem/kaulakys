@@ -153,6 +153,7 @@ for i = 0, ns-2 do begin
 
     	C = C * cfp[i]^2.   ; since the cross section is proportional to the square of the initial state momentum-space wavefunction in Kaulakys (1985)
                           ; note that if sum(cfps^2)=1 as it should, then we will get back the original value below when we merge the components
+                          ; this also assumes the angular momentum coupling coeffs sum to 1 (sum over all projections).  This is something to prove in future.
                           
 
        ;facT = exp(dE/(8.617d-5*T))
