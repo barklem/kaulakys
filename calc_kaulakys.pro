@@ -187,11 +187,15 @@ for i = 0, ns-2 do begin
        Cdata(i,j,*) = C
        Cdata(j,i,*) = Cdown
 
+       print, 'T [K]'
        fmt = '(' + strcompress(string(nT, '(i6)'), /remove_all) + '(1X,i10))'
+       fmt = '(10(1X,i10))'
        print, T, format = fmt
-
        fmt = '(' + strcompress(string(nT, '(i6)'), /remove_all) + '(1X,E10.2))'
+       fmt = '(10(1X,E10.2))'
+       print, 'rate coeff [cgs]'
        print, C, format = fmt
+       print, 'rate coeff downwards [cgs]'
        print, Cdown, format = fmt
        count= count+1
        skip:
