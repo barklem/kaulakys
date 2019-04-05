@@ -137,8 +137,8 @@ for i = 0, ns-2 do begin
        dE = (E[j]-E[i])/8065.45d0
        ts = {A:mass, N:n[i], L:l[i], ND:n[j], LD:l[j], NSTAR:nstar[i], DE:dE}
        ; since Emax = 30*kT in this routine, even with log grid, using << 30 pts is dangerous
-       ;C = kaulakys_rateh(T, ts, method=2, npts=100, scat=1)
-       C = kaulakys_rateh(T, ts, method=2, npts=100, scat=0)
+       C = kaulakys_rateh(T, ts, method=2, npts=100, scat=1)
+       ;C = kaulakys_rateh(T, ts, method=2, npts=100, scat=0)
        ;C = kaulakys_rateh(T, ts, method=2, npts=30, scat=0)
        
        	if sc[i] ne 0 then begin   ; in this case only one possible spin state
@@ -174,6 +174,9 @@ for i = 0, ns-2 do begin
        ;ind = where(finite(facT))
        ;Cdown = C * 0.d0
        ;Cdown[ind] = C[ind] * g[i]/g[j] * facT[ind]
+
+       ind = where(C lt 0.d0, nind)
+       if nind gt 0 then C[ind] = 0.d0
 
        Cdown = exp(alog(C *g[i]/g[j])+dE/(8.61733034d-5*T))   ; this limits numerical error at small T
 
