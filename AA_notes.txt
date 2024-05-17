@@ -1,0 +1,11 @@
+AA_notes.txt
+
+Following done DEC 2022 - MARCH 2023
+
+test_kaulakys.pro won't work without equivalent fixes.
+
+DONE:
+
+- Z>1 now implemented in MSWAVEF, so all calls to gwf and gwfsq need to have "ion" variable added
+- all calls in kaulakys.pro fixed
+- implemented in calc_kaulakys.pro

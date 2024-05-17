@@ -3,6 +3,10 @@ pro calc_kaulakys, infile, outdir
 
 ; the input file should be "unmerged" i.e. states are still divided into their components with different cores and thus cfps
 ; this must be so, since the spin redistribution requires the spin of the core to be known
+;
+; March 2023
+; updated to deal with positive ions (previously neutrals only) - might break backward compatibility
+; 
 
 time = systime(1)
 
@@ -34,9 +38,9 @@ Tstep = 50
 nT1=fix((Tmax-Tmin)/Tstep)+1
 T1 = indgen(nT1)*Tstep + Tmin
 
-Tmin = 2000
+Tmin = 500
 Tmax = 20000
-Tstep = 1000
+Tstep = 500
 
 nT2=fix((Tmax-Tmin)/Tstep)+1
 T2 = indgen(nT2)*Tstep + Tmin
@@ -44,9 +48,12 @@ T2 = indgen(nT2)*Tstep + Tmin
 T = [T1, T2]
 nT = nT1 + nT2
 
+T = T2 
+nT = nT2
+
 ; read data
 openr, lunm, infile, /get_lun
-readf, lunm, ns, mass, format = '(i10,f12.4)'
+readf, lunm, ns, mass, ion, format = '(i10,f12.4,i10)'
 label = strarr(ns)
 g = intarr(ns)
 E = dblarr(ns)
@@ -115,16 +122,45 @@ Cdata = dblarr(ns,ns,nT)
 ; Kaulakys is for excitation - stated energy is transferred to the electron,  p_t is momentum threshold
 ; and so downward rates come from detailed balance.
 
+ntrans = 0.5*(ns*ns - ns) 
+dt_store = dblarr(ntrans)
+trem_store = dblarr(ntrans)
+ttot_store = dblarr(ntrans)
+window, 2, xsize = 1000, ysize = 1000
+!p.multi = [0,1,2]
+
 count = 0
+count_nonzero = 0
+ttot = 0.
 for i = 0, ns-2 do begin
    for j = i+1, ns-1 do begin
-       print, i+1, j+1
-       if sc[i] ne sc[j] then goto, skip
-       if core[i] ne core[j] then goto, skip
-       if ionic[i] or ionic[j] then goto, skip
-       if Hexc[i] or Hexc[j] then goto, skip       ; model can't couple different H excitations
-       if (nstar[i]-l[i]) lt 0.1 then goto, skip   ; the Coulomb model breaks down
-       if (nstar[j]-l[j]) lt 0.1 then goto, skip
+       print, ' '
+       print, count+1, ' of ', fix(ntrans)
+       print, i+1, j+1, nstar[i], nstar[j], l[i], l[j] 
+       if sc[i] ne sc[j] then begin
+         print, 'SKIPPING - different cores'
+         goto, skip
+       endif
+       if core[i] ne core[j] then begin
+         print, 'SKIPPING - different cores'
+         goto, skip
+       endif
+       if ionic[i] or ionic[j] then begin
+         print, 'SKIPPING - at least one state ionic'
+         goto, skip
+       endif
+       if Hexc[i] or Hexc[j] then begin
+         print, 'SKIPPING - excited H state involved'
+         goto, skip
+       endif       ; model can't couple different H excitations
+       if (nstar[i]-l[i]) lt 0.1 then begin
+         print, 'SKIPPING - Coulomb model breakdown at small n*-l'
+         goto, skip
+       endif  ; the Coulomb model breaks down
+       if (nstar[j]-l[j]) lt 0.1 then begin
+         print, 'SKIPPING - Coulomb model breakdown at small n*-l'
+         goto, skip
+       endif  ; the Coulomb model breaks down
 
        ; where multiple (two) parents but no equivalent electrons, we skip the second 
        ; to avoid counting twice.  This could in principle be accounted for via 
@@ -135,12 +171,25 @@ for i = 0, ns-2 do begin
        endif 
 
        dE = (E[j]-E[i])/8065.45d0
-       ts = {A:mass, N:n[i], L:l[i], ND:n[j], LD:l[j], NSTAR:nstar[i], DE:dE}
+       ts = {A:mass, ION:ion, N:n[i], L:l[i], ND:n[j], LD:l[j], NSTAR:nstar[i], DE:dE}
        ; since Emax = 30*kT in this routine, even with log grid, using << 30 pts is dangerous
        ;C = kaulakys_rateh(T, ts, method=2, npts=100, scat=1)
-       C = kaulakys_rateh(T, ts, method=2, npts=100, scat=0)
-       ;C = kaulakys_rateh(T, ts, method=2, npts=30, scat=0)
+       ; for Eu II, 30 seems enough to get same result as 100 from 50 to 20000 K
+       C = kaulakys_rateh(T, ts, method=2, npts=100, scat=0, delta_t = dt)
+       ;C = kaulakys_rateh(T, ts, method=2, npts=100, scat=0, delta_t = dt)
+
+       ; estimate total time remaining
+       ttot = ttot + dt
+       trem = (ttot / (count_nonzero+1.d0)) * ((count_nonzero+1.d0)/ (count+1.d0)) * (ntrans - count) / 86400.
+       print, 'Estimated time remaining:', trem, ' days'
        
+       ; plot time evolution
+       ttot_store[count_nonzero] = ttot
+       dt_store[count_nonzero] = dt 
+       trem_store[count_nonzero] = trem
+       plot, ttot_store[0:count_nonzero], dt_store[0:count_nonzero], xtitle = 'time[s]', ytitle = 'time [s]'
+       plot, ttot_store[0:count_nonzero]/86400., trem_store[0:count_nonzero], xtitle = 'time[days]', ytitle = 'estimated time remaining [days]'
+
        	if sc[i] ne 0 then begin   ; in this case only one possible spin state
 
             ; find the other possible spin state
@@ -197,8 +246,9 @@ for i = 0, ns-2 do begin
        print, C, format = fmt
        print, 'rate coeff downwards [cgs]'
        print, Cdown, format = fmt
-       count= count+1
+       count_nonzero= count_nonzero+1
        skip:
+       count= count+1
    endfor
 endfor
 
@@ -229,8 +279,9 @@ endfor
 print, 'input file: ', infile
 print, 'output directory: ', outdir
 print, 'number of transitions: ', count
+print, 'number of non-zero transitions: ', count_nonzero
 print, 'time for calc_kaulakys: ', systime(1) - time
-print, 'time per transition: ', (systime(1) - time)/(count*1.)
+print, 'time per transition: ', (systime(1) - time)/(count_nonzero*1.)
 
 
 end
