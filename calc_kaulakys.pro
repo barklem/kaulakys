@@ -68,33 +68,46 @@ cfp = fltarr(ns)
 Hexc = intarr(ns) * 0
 
 for i = 0, ns-1 do begin
-	ii=0
-	t1 = ' '
-	t2 = 0
-	t3 = 0.d0
-	t4 = 0
-	t5 = 0
-	t6 = 0.d0
-	t7 = 0.
-	t8 = 0.
-	t9 = 0
-	t10 = ' '
-	t11 = 0.
-    readf, lunm, ii, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, format='(i3,a12,i3,f12.3,2i3,f12.3,2f5.1,i3,a10,f8.3)'
-    label(i) = t1
-    g(i) = t2
-    E(i) = t3
-    n(i) = t4   
-    l(i) = t5
-    nstar(i) = t6
-    s(i) = t7
-    sc(i) = t8
-    ionic(i) = t9
-    core(i) = t10
-    cfp(i) = t11
+    ;--
+    ; ama51: original script to read input file
+    ;--
+	;ii=0
+	;t1 = ' '
+	;t2 = 0
+	;t3 = 0.d0
+	;t4 = 0
+	;t5 = 0
+	;t6 = 0.d0
+	;t7 = 0.
+	;t8 = 0.
+	;t9 = 0
+	;t10 = ' '
+	;t11 = 0.
+    ;readf, lunm, ii, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, format='(i3,a12,i3,f12.3,2i3,f12.3,2f5.1,i3,a10,f8.3)'
+
+    ;--
+    ; ama51: now use white space to separate inputs 
+    ; (warning: do not use white space in your labels!)
+    ;--
+    str=''
+    readf,lunm,str
+    str=strsplit(str,/extract)
+    label(i) = str[1]
+    g(i) = double(str[2])
+    E(i) = double(str[3])
+    n(i) = double(str[4])
+    l(i) = double(str[5])
+    nstar(i) = double(str[6])
+    s(i) = double(str[7])
+    sc(i) = double(str[8])
+    ionic(i) = double(str[9])
+    core(i) = str[10]
+    cfp(i) = double(str[11])
+    ;--
+    ; ama51: end modification
+    ;--
     if strpos(label[i], 'H*') ge 0 then Hexc(i) = 1
 endfor
-
 
 close, lunm
 free_lun, lunm
