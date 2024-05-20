@@ -53,7 +53,18 @@ nT = nT2
 
 ; read data
 openr, lunm, infile, /get_lun
-readf, lunm, ns, mass, ion, format = '(i10,f12.4,i10)'
+;--
+; ama51: separate by white space
+;--
+;readf, lunm, ns, mass, ion, format = '(i10,f12.4,i10)'
+str=''
+readf, lunm, str
+str=strsplit(str,/extract)
+ns=long(str[0])
+mass=double(str[1])
+ion=long(str[2])
+;--
+
 label = strarr(ns)
 g = intarr(ns)
 E = dblarr(ns)
@@ -69,7 +80,8 @@ Hexc = intarr(ns) * 0
 
 for i = 0, ns-1 do begin
     ;--
-    ; ama51: original script to read input file
+    ; ama51: now use white space to separate inputs 
+    ; (warning: do not use white space in your labels!)
     ;--
 	;ii=0
 	;t1 = ' '
@@ -84,11 +96,6 @@ for i = 0, ns-1 do begin
 	;t10 = ' '
 	;t11 = 0.
     ;readf, lunm, ii, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, format='(i3,a12,i3,f12.3,2i3,f12.3,2f5.1,i3,a10,f8.3)'
-
-    ;--
-    ; ama51: now use white space to separate inputs 
-    ; (warning: do not use white space in your labels!)
-    ;--
     str=''
     readf,lunm,str
     str=strsplit(str,/extract)
@@ -103,8 +110,6 @@ for i = 0, ns-1 do begin
     ionic(i) = double(str[9])
     core(i) = str[10]
     cfp(i) = double(str[11])
-    ;--
-    ; ama51: end modification
     ;--
     if strpos(label[i], 'H*') ge 0 then Hexc(i) = 1
 endfor
